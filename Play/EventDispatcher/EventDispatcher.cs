@@ -24,9 +24,9 @@ public class EventDispatcher : IEventDispatcher
     public async Task DispatchAsync(IEvent @event)
     {
         var eventType = @event.GetType();
-        if (_handlers.ContainsKey(eventType))
+        if (_handlers.TryGetValue(eventType, out var handlers))
         {
-            foreach (var handler in _handlers[eventType])
+            foreach (var handler in handlers)
             {
                 await handler(@event);
             }
