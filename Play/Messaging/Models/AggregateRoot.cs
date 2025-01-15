@@ -1,6 +1,4 @@
-using Play.Messaging.Models;
-
-namespace Play;
+namespace Play.Messaging.Models;
 
 public class AggregateRoot
 {

@@ -1,5 +1,6 @@
 using Play.EventDispatcher;
 using Play.EventStore;
+using Play.Messaging.Models;
 using Play.PostgresEventStore;
 
 namespace Play.Repository;

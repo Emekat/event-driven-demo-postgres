@@ -1,14 +1,18 @@
 using api;
 using api.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Play.Messaging.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
 builder.Services.AddDbContext<EventStoreContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("EventStore")));
+options.UseNpgsql(builder.Configuration.GetConnectionString("EventStore")));
+
 builder.Services.AddEventSourcing(builder.Configuration.GetConnectionString("EventStore"));
 
 var app = builder.Build();

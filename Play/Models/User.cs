@@ -1,4 +1,5 @@
 using Play.Messaging.Events;
+using Play.Messaging.Models;
 
 namespace Play.Models;
 
