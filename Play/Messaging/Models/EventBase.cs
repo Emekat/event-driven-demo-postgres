@@ -6,4 +6,6 @@ public abstract class EventBase : IEvent
     public string Type => GetType().Name;
     public string AggregateId { get; protected set; } = string.Empty;
     public int Version { get; protected set; }
+    public long SequenceNumber { get; set; }
+    public bool IsProcessed { get; set; } = false;
 }
