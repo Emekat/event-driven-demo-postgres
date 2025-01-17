@@ -23,7 +23,7 @@ public class EventSubscriber : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-       var lastProcessedEventId = await ((PostgresEventStore)_eventStore).GetLatestSequenceNumber();
+        var lastProcessedEventId = await _eventStore.GetLatestSequenceNumber();
         _logger.LogInformation("Starting from sequence number: {SequenceNumber}", lastProcessedEventId);
 
         while (!stoppingToken.IsCancellationRequested)
