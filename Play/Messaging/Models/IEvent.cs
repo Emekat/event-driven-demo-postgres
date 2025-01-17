@@ -7,4 +7,6 @@ public interface IEvent
     string Type { get; }
     string AggregateId { get; }
     int Version { get; }
+    long SequenceNumber { get; set; }
+    bool IsProcessed { get; set; }
 }
