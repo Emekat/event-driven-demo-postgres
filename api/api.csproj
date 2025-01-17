@@ -22,8 +22,4 @@
       <ProjectReference Include="..\Play\Play.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Data\" />
-    </ItemGroup>
-
 </Project>
