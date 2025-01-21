@@ -1,21 +1,44 @@
 using api;
-using api.Data;
+using api.Contracts;
+using api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Play.Messaging.Events;
+using Play.Data;
+using Play.PostgresEventStore;
+using Play.Serializer;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddDbContext<EventStoreContext>(options =>
-options.UseNpgsql(builder.Configuration.GetConnectionString("EventStore")));
+builder.Services.AddScoped<IEventStore, PostgresEventStore>();
+builder.Services.AddSingleton<IEventSerializer, JsonEventSerializer>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
-builder.Services.AddEventSourcing(builder.Configuration.GetConnectionString("EventStore"));
+builder.Services.AddDbContext<EventStoreContext>(opt =>
+{
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("EventStore"), b 
+        => b.MigrationsAssembly(typeof(EventStoreContext).Assembly.FullName));
+    opt.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+});
 
+builder.Services.AddHostedService<EventSubscriber>();
 var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
+// Configure the HTTP request pipeline
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
 
 // Ensure database is created and migrations are applied
 using (var scope = app.Services.CreateScope())
@@ -23,12 +46,5 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<EventStoreContext>();
     await context.Database.MigrateAsync();
 }
-// Configure the HTTP request pipeline.
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-await app.RunAsync();
+app.Run();

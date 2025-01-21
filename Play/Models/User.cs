@@ -6,19 +6,14 @@ namespace Play.Models;
 public class User : AggregateRoot
 {
     public string UserId { get; private set; }
-    public string RoleId { get; private set; }
     public string TenantId { get; private set; }
+    public string Name { get; private set; }
 
-    public User(string userId, string roleId, string tenantId)
+    public User(string userId, string tenantId, string name)
     {
-        ApplyChange(new UserCreatedEvent(Guid.NewGuid().ToString(), 0, userId, roleId, tenantId));
-    }
-
-    public void Apply(UserCreatedEvent @event)
-    {
-        Id = @event.AggregateId;
-        UserId = @event.UserId;
-        RoleId = @event.RoleId;
-        TenantId = @event.TenantId;
+        UserId = userId;
+        TenantId = tenantId;
+        Name = name;
+        ApplyChange(new UserRegisteredEvent(aggregateId: Guid.CreateVersion7().ToString(), version: 0, userId, tenantId, name));
     }
 }
