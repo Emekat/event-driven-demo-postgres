@@ -1,19 +1,17 @@
 ﻿using Play.Messaging.Models;
-
 namespace Play.Messaging.Events;
-public class UserCreatedEvent : EventBase
+public class UserRegisteredEvent : EventBase
 {
     public string UserId { get; }
-    public string RoleId { get; }
     public string TenantId { get; }
+    public string Name { get; }
 
-    public UserCreatedEvent(string aggregateId, int version, string userId,
-         string roleId, string tenantId)
+    public UserRegisteredEvent(string aggregateId, int version, string userId, string tenantId, string name)
     {
         AggregateId = aggregateId;
         Version = version;
         UserId = userId;
         TenantId = tenantId;
-        RoleId = roleId;
+        Name = name;
     }
 }
