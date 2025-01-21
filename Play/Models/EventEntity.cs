@@ -9,5 +9,4 @@ public class EventEntity
     public string Data { get; set; }
     public int Version { get; set; }
     public DateTime Timestamp { get; set; }
-    public bool IsProcessed { get; set; }
 }
