@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Play.Data;
 using Play.Exceptions;
 using Play.Messaging.Models;
@@ -17,6 +16,7 @@ public class PostgresEventStore(EventStoreContext context, IEventSerializer seri
         try
         {
             // Check version
+            //optimistic concurrency control check
             var currentVersion = await context.Events
                 .Where(e => e.AggregateId == aggregateId)
                 .MaxAsync(e => (int?)e.Version) ?? -1;
@@ -28,12 +28,10 @@ public class PostgresEventStore(EventStoreContext context, IEventSerializer seri
             var eventEntities = events.Select(@event => new EventEntity
             {
                 Id = @event.Id,
-                AggregateId = @event.AggregateId,
                 Type = @event.Type,
                 Data = serializer.Serialize(@event),
                 Version = @event.Version,
-                Timestamp = @event.Timestamp,
-                IsProcessed = @event.IsProcessed
+                Timestamp = @event.Timestamp
             }).ToList();
 
             await context.Events.AddRangeAsync(eventEntities);
@@ -57,8 +55,7 @@ public class PostgresEventStore(EventStoreContext context, IEventSerializer seri
                     .ToListAsync()
                 : 
                 await context.Events
-                    .Where(e => e.SequenceNumber > sequenceNumber 
-                                && !e.IsProcessed)
+                    .Where(e => e.SequenceNumber > sequenceNumber)
                     .OrderBy(e => e.SequenceNumber)
                     .Take(batchSize)
                     .ToListAsync();
@@ -74,25 +71,49 @@ public class PostgresEventStore(EventStoreContext context, IEventSerializer seri
     public async Task<IEnumerable<IEvent>> GetEventsAfter(long sequenceNumber)
     {
         var events = await context.Events
-            .Where(e => e.SequenceNumber > sequenceNumber
-                        && !e.IsProcessed)
+            .Where(e => e.SequenceNumber > sequenceNumber)
             .OrderBy(e => e.SequenceNumber)
             .Take(100) // Batch size - could be configurable
             .ToListAsync();
 
         return events.Select(e => serializer.Deserialize(e.Data, e.Type));
     }
+    
+    public async Task<IEnumerable<IEvent>> GetEventsAfterWithAggregateId(string aggregateId, long sequenceNumber)
+    {
+        var events = await context.Events
+            .Where(e => e.AggregateId == aggregateId
+                        && e.SequenceNumber > sequenceNumber)
+            .OrderBy(e => e.SequenceNumber)
+            .Take(100) // Batch size - could be configurable
+            .ToListAsync();
 
+        return events.Select(e => serializer.Deserialize(e.Data, e.Type));
+    }
+    
     public async Task<long> GetLatestSequenceNumber()
     {
-        return await context.Events.Where(e => !e.IsProcessed)
+        return await context.Events
             .MaxAsync(e => (long?)e.SequenceNumber) ?? 0;
     }
-    public Task UpdateEventStatusAsync(long sequenceNumber, bool isProcessed)
+
+    public async Task SaveFailedEventAsync(IEvent @event, Exception exception)
     {
-       var eventEntity = context.Events.FirstOrDefault(e => e.SequenceNumber == sequenceNumber);
-       eventEntity!.IsProcessed = isProcessed;
-       context.SaveChanges();
-       return Task.CompletedTask;       
+        var failedEvent = new FailedEventEntity
+        {
+            Id = Guid.CreateVersion7(),
+            SequenceNumber = @event.SequenceNumber,
+            Type = @event.GetType().Name,
+            ErrorMessage = exception.Message,
+            StackTrace = exception.StackTrace,
+            FailureTime = DateTime.UtcNow,
+            RetryCount = 0,
+            Data = serializer.Serialize(@event),
+            Timestamp = @event.Timestamp,
+            IsProcessed = false
+        };
+        context.FailedEvents.Add(failedEvent);
+
+        await context.SaveChangesAsync();
     }
 }
